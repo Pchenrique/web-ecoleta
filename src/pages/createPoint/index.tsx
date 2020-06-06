@@ -137,10 +137,12 @@ const CreatPoint = () => {
             items
         };
 
-        await api.post('points', data);
-
-        history.push('/');
-
+        await api.post('points', data).then(point => {
+            history.push('/confirmed');
+        }).catch(err => {
+            history.push('/canceled');
+        })
+        
     }
 
     return (
