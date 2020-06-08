@@ -4,7 +4,11 @@ import { FiArrowLeft } from 'react-icons/fi';
 import { Map, TileLayer, Marker } from 'react-leaflet';
 import axios from 'axios'
 import { LeafletMouseEvent } from 'leaflet';
+import * as yup from 'yup';
+import { setLocale } from 'yup'
 import api from '../../services/api';
+
+import Dropzone from '../../components/Dropzone';
 
 
 import './style.css';
@@ -32,6 +36,7 @@ const CreatPoint = () => {
     const [cities, setCities] = useState<string[]>([]);
     const [selectedItems, setselectedItems] = useState<number[]>([]);
     const [initialPosition, setInitialPosition] = useState<[number, number]>([0,0]);
+    const [selectedFile, setSelectedFile] = useState<File>();
 
     const [formData, setFormData] = useState({
         name: '',
@@ -44,6 +49,23 @@ const CreatPoint = () => {
     const [selectedPosition, setSelectedPosition] = useState<[number, number]>([0,0]);
 
     const history = useHistory();
+
+    setLocale({
+        mixed: {
+          default: 'Não é válido',
+        },
+    });
+
+    let schema = yup.object().shape({
+        name: yup.string().required(),
+        email: yup.string().required().email(),
+        whatsapp: yup.string().required(),
+        latitude: yup.number().required(),
+        longitude: yup.number().required(),
+        city: yup.string().required(),
+        uf: yup.string().required().max(2),
+        items: yup.string()
+    });
 
     useEffect(() => {
         navigator.geolocation.getCurrentPosition(position => {
@@ -126,16 +148,36 @@ const CreatPoint = () => {
         const [latitude, longitude] = selectedPosition;
         const items = selectedItems;
 
-        const data = {
+        const validation = {
             name,
             email,
             whatsapp,
-            uf,
-            city,
             latitude,
             longitude,
-            items
-        };
+            uf,
+            city,
+            items,
+        }
+
+        schema.validate(validation).catch(function (err) {
+            console.log(err.name);
+            console.log(err.errors);
+        });
+
+        const data = new FormData();
+        
+        data.append('name', name);
+        data.append('email', email);
+        data.append('whatsapp', whatsapp);
+        data.append('uf', uf);
+        data.append('city', city);
+        data.append('latitude', String(latitude));
+        data.append('longitude', String(longitude));
+        data.append('items', items.join(','));
+
+        if(selectedFile){
+            data.append('image', selectedFile);
+        }
 
         await api.post('points', data).then(point => {
             history.push('/confirmed');
@@ -158,6 +200,8 @@ const CreatPoint = () => {
 
             <form onSubmit={handleSubmit}>
                 <h1>Cadastro do <br /> ponto de coleta</h1>
+
+                <Dropzone onFileUploaded={setSelectedFile} />
 
                 <fieldset>
                     <legend>
